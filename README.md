@@ -11,6 +11,7 @@ A React application for creating and managing grocery lists using the Spoonacula
 - Items are grouped by aisle for easier shopping
 - API rate limiting to respect Spoonacular's free tier limits
 - Warning when approaching the daily API point limit
+- Store locator to find nearby grocery stores using Google Maps API
 
 ## Getting Started
 
@@ -23,8 +24,8 @@ A React application for creating and managing grocery lists using the Spoonacula
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/livslist.git
-   cd livslist
+   git clone https://github.com/mrgetwhateverdone/LivsList.git
+   cd LivsList
    ```
 
 2. Install dependencies:
@@ -57,6 +58,7 @@ Each search request costs 1 point. The application tracks your API usage and war
 - Tailwind CSS
 - Axios
 - Spoonacular API
+- Google Maps API
 
 ## License
 
@@ -65,3 +67,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Powered by [Spoonacular API](https://spoonacular.com/food-api)
+- Store locator powered by [Google Maps API](https://developers.google.com/maps)
