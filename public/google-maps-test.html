@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Google Maps API Test</title>
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .info {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Google Maps API Test</h1>
+  
+  <div class="info">
+    <p>This page tests if your Google Maps API key is working correctly.</p>
+    <p>API Key being tested: <code>AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I</code></p>
+    <p>If the map loads below, your API key is working. If not, check the console for errors.</p>
+  </div>
+  
+  <div id="map"></div>
+  
+  <script>
+    // This function will be called when the Google Maps API loads
+    function initMap() {
+      console.log('Google Maps API loaded successfully');
+      
+      // Create a map centered at a default location
+      const map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+        zoom: 12
+      });
+      
+      // Add a marker
+      new google.maps.Marker({
+        position: { lat: 37.7749, lng: -122.4194 },
+        map: map,
+        title: 'San Francisco'
+      });
+    }
+    
+    // Log any authentication failures
+    function gm_authFailure() {
+      console.error('Google Maps authentication failed - API key may be invalid or restricted');
+      document.getElementById('map').innerHTML = 
+        '<div style="padding: 20px; background-color: #ffebee; color: #c62828; border-radius: 5px;">' +
+        '<h3>Google Maps Authentication Error</h3>' +
+        '<p>The API key is invalid or has restrictions that prevent it from working on this domain.</p>' +
+        '<p>Check the JavaScript console for more details.</p>' +
+        '</div>';
+    }
+  </script>
+  
+  <!-- Load the Google Maps API with your key -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I&callback=initMap">
+  </script>
+</body>
+</html> 

@@ -195,7 +195,18 @@ const StoreLocator = () => {
         // Use the actual API key, not a placeholder
         const apiKey = 'AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I';
         
-        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMapsCallback`;
+        // Add a specific error handler for the Google Maps API
+        window.gm_authFailure = () => {
+          console.error('Google Maps authentication error - API key may be invalid or restricted');
+          setMapError(true);
+          setError('Google Maps authentication failed. The API key may be invalid or restricted.');
+          setLoading(false);
+        };
+        
+        // Log the full URL for debugging (without exposing the key in production)
+        console.log(`Loading Google Maps with libraries: places,geometry`);
+        
+        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMapsCallback&v=weekly`;
         googleMapScript.async = true;
         googleMapScript.defer = true;
         
@@ -243,6 +254,11 @@ const StoreLocator = () => {
       // Remove the callback function
       if (window.initGoogleMapsCallback) {
         delete window.initGoogleMapsCallback;
+      }
+      
+      // Remove the auth failure handler
+      if (window.gm_authFailure) {
+        delete window.gm_authFailure;
       }
       
       // Remove any Google Maps scripts
@@ -424,17 +440,35 @@ const StoreLocator = () => {
           <h2 className="text-xl font-bold mb-2">Google Maps Error</h2>
           <p className="mb-4">We couldn't load the Google Maps service properly. This might be due to:</p>
           <ul className="list-disc text-left inline-block mb-4">
-            <li>An issue with the API key</li>
+            <li>An issue with the API key (it may be invalid or restricted)</li>
             <li>Network connectivity problems</li>
-            <li>Temporary service disruption</li>
+            <li>Missing API activation in Google Cloud Console</li>
+            <li>Billing not enabled for the Google Maps Platform</li>
           </ul>
-          <p>Please try again later or contact support if the problem persists.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            Reload Page
-          </button>
+          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-md text-sm text-yellow-800 mb-4">
+            <p className="font-semibold">For developers:</p>
+            <p>1. Ensure the Google Maps JavaScript API is enabled in the Google Cloud Console</p>
+            <p>2. Verify that billing is set up for the Google Maps Platform</p>
+            <p>3. Check that the API key has the proper permissions and no restrictive referrer settings</p>
+            <p>4. Required APIs: Maps JavaScript API, Places API, and Geocoding API</p>
+          </div>
+          <p>Please check the browser console for specific error messages.</p>
+          <div className="mt-4 flex justify-center space-x-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Reload Page
+            </button>
+            <a 
+              href="https://console.cloud.google.com/google/maps-apis/overview" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Go to Google Cloud Console
+            </a>
+          </div>
         </div>
       </div>
     );
