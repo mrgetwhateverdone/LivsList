@@ -477,13 +477,19 @@ const StoreLocator = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Grocery Store Locator</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
+          <svg className="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Grocery Store Locator
+        </h1>
         <p className="text-gray-600">Find grocery stores near you within a 10-mile radius</p>
       </div>
       
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full md:w-1/3">
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6 transition-all duration-300 hover:shadow-lg">
             <form onSubmit={handleZipCodeSearch} className="mb-4">
               <div className="mb-4">
                 <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
@@ -498,22 +504,33 @@ const StoreLocator = () => {
                     placeholder="Enter a zip code"
                     pattern="^\d{5}(-\d{4})?$"
                     maxLength="10"
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-grow px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 transform hover:translate-x-0.5"
                     disabled={loading}
                   >
-                    {loading ? 'Searching...' : 'Search'}
+                    {loading ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Searching...
+                      </span>
+                    ) : (
+                      'Search'
+                    )}
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Example: 94103</p>
               </div>
               
               <div className="mb-4">
-                <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1">
-                  Search Radius: {searchRadius} miles
+                <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                  <span>Search Radius</span>
+                  <span className="text-green-600 font-semibold">{searchRadius} miles</span>
                 </label>
                 <input
                   type="range"
@@ -522,17 +539,21 @@ const StoreLocator = () => {
                   max="10"
                   value={searchRadius}
                   onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
                 />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>1 mile</span>
+                  <span>10 miles</span>
+                </div>
               </div>
               
               <button
                 type="button"
                 onClick={getUserLocation}
-                className="w-full px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center"
+                className="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.01] hover:shadow-sm"
                 disabled={loading}
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -541,31 +562,41 @@ const StoreLocator = () => {
             </form>
             
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-4 animate-fadeIn">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-red-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
               </div>
             )}
             
             <div className="mb-4">
-              <h3 className="font-semibold text-gray-800 mb-2">Distance Legend</h3>
-              <div className="space-y-2">
-                <div className="flex items-center">
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                <svg className="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Distance Legend
+              </h3>
+              <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
                   <div className="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
                   <span className="text-sm">Less than 1 mile</span>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
                   <div className="w-4 h-4 rounded-full bg-blue-500 mr-2"></div>
                   <span className="text-sm">1-3 miles</span>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
                   <div className="w-4 h-4 rounded-full bg-purple-500 mr-2"></div>
                   <span className="text-sm">3-5 miles</span>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
                   <div className="w-4 h-4 rounded-full bg-orange-500 mr-2"></div>
                   <span className="text-sm">5-10 miles</span>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
                   <div className="w-4 h-4 rounded-full bg-red-500 mr-2"></div>
                   <span className="text-sm">More than 10 miles</span>
                 </div>
@@ -573,30 +604,47 @@ const StoreLocator = () => {
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg">Nearby Grocery Stores</h2>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="font-semibold text-lg flex items-center">
+                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Nearby Grocery Stores
+              </h2>
+              {stores.length > 0 && (
+                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                  {stores.length} found
+                </span>
+              )}
             </div>
             
             {loading ? (
               <div className="p-6 flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+                  <p className="mt-3 text-gray-500">Searching for stores...</p>
+                </div>
               </div>
             ) : stores.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
+                <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
                 {error ? error : 'No grocery stores found nearby. Try increasing the search radius or searching a different location.'}
               </div>
             ) : (
               <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
                 {getStoreGroups().map((group, groupIndex) => (
                   <div key={groupIndex} className={`border-l-4 ${getColorClass(group.color)}`}>
-                    <div className={`px-4 py-2 font-medium ${getColorClass(group.color)}`}>
+                    <div className={`px-4 py-2 font-medium ${getColorClass(group.color)} flex items-center`}>
+                      <div className={`w-3 h-3 rounded-full bg-${group.color}-500 mr-2`}></div>
                       {getColorLabel(group.color)}
                     </div>
                     {group.stores.map(store => (
                       <div 
                         key={store.id} 
-                        className="p-4 hover:bg-gray-50 cursor-pointer"
+                        className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-sm group"
                         onClick={() => {
                           if (map && store.location) {
                             map.setCenter(store.location);
@@ -607,18 +655,32 @@ const StoreLocator = () => {
                           }
                         }}
                       >
-                        <h3 className="font-semibold text-gray-800">{store.name}</h3>
-                        <p className="text-sm text-gray-600">{store.address}</p>
+                        <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">{store.name}</h3>
+                        <p className="text-sm text-gray-600 mt-1 flex items-center">
+                          <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          {store.address}
+                        </p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-medium text-green-600">{store.distance} miles</span>
+                          <span className="text-sm font-medium text-green-600 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {store.distance} miles
+                          </span>
                           {store.rating && (
-                            <div className="flex items-center">
+                            <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
                               <svg className="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                               </svg>
                               <span className="text-sm text-gray-600">{store.rating}</span>
                             </div>
                           )}
+                        </div>
+                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-blue-600">
+                          Click to view on map →
                         </div>
                       </div>
                     ))}
@@ -630,7 +692,7 @@ const StoreLocator = () => {
         </div>
         
         <div className="w-full md:w-2/3">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden h-[700px]">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden h-[700px] transition-all duration-300 hover:shadow-lg">
             {!mapLoaded ? (
               <div className="w-full h-full flex items-center justify-center bg-gray-100">
                 <div className="text-center">
