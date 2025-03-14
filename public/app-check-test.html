@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase App Check with Google Maps Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4ade80;
+      border-bottom: 2px solid #4ade80;
+      padding-bottom: 10px;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .status {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .success {
+      background-color: #f0fdf4;
+      border-left: 4px solid #4ade80;
+      color: #166534;
+    }
+    .error {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #991b1b;
+    }
+    .info {
+      background-color: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      color: #1e40af;
+    }
+    pre {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    button {
+      background-color: #4ade80;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Firebase App Check with Google Maps Test</h1>
+    
+    <div id="status" class="status info">
+      <p>Initializing Firebase and App Check...</p>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div>
+      <h2>Debug Information</h2>
+      <pre id="debug"></pre>
+    </div>
+    
+    <button id="refreshToken">Refresh App Check Token</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-check-compat.js"></script>
+
+  <script>
+    // Debug element
+    const debugEl = document.getElementById('debug');
+    const statusEl = document.getElementById('status');
+    const refreshBtn = document.getElementById('refreshToken');
+    let map;
+    let appCheck;
+
+    // Log function
+    function log(message, data) {
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      const logMessage = `[${timestamp}] ${message}`;
+      console.log(logMessage, data);
+      
+      if (data) {
+        debugEl.textContent += logMessage + '\n' + JSON.stringify(data, null, 2) + '\n\n';
+      } else {
+        debugEl.textContent += logMessage + '\n\n';
+      }
+      
+      // Auto-scroll to bottom
+      debugEl.scrollTop = debugEl.scrollHeight;
+    }
+
+    // Update status
+    function updateStatus(message, type = 'info') {
+      statusEl.className = `status ${type}`;
+      statusEl.innerHTML = `<p>${message}</p>`;
+    }
+
+    // Initialize Firebase
+    function initializeFirebase() {
+      try {
+        // Your web app's Firebase configuration
+        // TODO: Replace with your actual Firebase configuration
+        const firebaseConfig = {
+          apiKey: "YOUR_FIREBASE_API_KEY",
+          authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+          projectId: "YOUR_FIREBASE_PROJECT_ID",
+          storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+          messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+          appId: "YOUR_FIREBASE_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        log('Firebase initialized successfully');
+
+        // Enable debug mode for development
+        window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+
+        // Initialize App Check with reCAPTCHA v3
+        appCheck = firebase.appCheck();
+        appCheck.activate(
+          // TODO: Replace with your actual reCAPTCHA site key
+          'YOUR_RECAPTCHA_SITE_KEY',
+          true // isTokenAutoRefreshEnabled
+        );
+
+        log('App Check initialized');
+        updateStatus('Firebase and App Check initialized successfully. Loading Google Maps...', 'success');
+
+        // Load Google Maps after App Check is initialized
+        loadGoogleMaps();
+      } catch (error) {
+        log('Error initializing Firebase:', error);
+        updateStatus(`Error initializing Firebase: ${error.message}`, 'error');
+      }
+    }
+
+    // Get App Check token
+    async function getAppCheckToken() {
+      try {
+        const tokenResult = await appCheck.getToken();
+        log('App Check token obtained:', { token: tokenResult.token.substring(0, 20) + '...' });
+        return tokenResult.token;
+      } catch (error) {
+        log('Error getting App Check token:', error);
+        updateStatus(`Error getting App Check token: ${error.message}`, 'error');
+        return null;
+      }
+    }
+
+    // Load Google Maps API
+    function loadGoogleMaps() {
+      try {
+        const script = document.createElement('script');
+        
+        // Use the actual API key, not a placeholder
+        const apiKey = 'AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I';
+        
+        // Add a specific error handler for the Google Maps API
+        window.gm_authFailure = () => {
+          log('Google Maps authentication error - API key may be invalid or restricted');
+          updateStatus('Google Maps authentication failed. The API key may be invalid or restricted.', 'error');
+        };
+        
+        // Define a global callback function that will be called when the API is loaded
+        window.initMap = async () => {
+          log('Google Maps API loaded successfully');
+          
+          try {
+            // Set up App Check token for Google Maps
+            const { Settings } = google.maps;
+            if (Settings) {
+              Settings.getInstance().fetchAppCheckToken = async () => {
+                // Get a fresh token
+                return await getAppCheckToken();
+              };
+              log('App Check token integration with Google Maps successful');
+            }
+            
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+              center: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+              zoom: 12
+            });
+            
+            // Add a marker
+            new google.maps.Marker({
+              position: { lat: 37.7749, lng: -122.4194 },
+              map: map,
+              title: 'San Francisco'
+            });
+            
+            updateStatus('Google Maps loaded successfully with App Check integration!', 'success');
+          } catch (err) {
+            log('Error setting up map:', err);
+            updateStatus(`Error setting up map: ${err.message}`, 'error');
+          }
+        };
+        
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&v=weekly`;
+        script.async = true;
+        script.defer = true;
+        
+        script.addEventListener('load', () => {
+          log('Google Maps script loaded');
+        });
+        
+        script.addEventListener('error', (e) => {
+          log('Failed to load Google Maps API', e);
+          updateStatus('Failed to load Google Maps. Please check your internet connection and try again.', 'error');
+        });
+        
+        document.body.appendChild(script);
+      } catch (err) {
+        log('Error loading Google Maps:', err);
+        updateStatus(`Error loading Google Maps: ${err.message}`, 'error');
+      }
+    }
+
+    // Refresh token button
+    refreshBtn.addEventListener('click', async () => {
+      try {
+        const token = await getAppCheckToken();
+        if (token) {
+          updateStatus('App Check token refreshed successfully!', 'success');
+        }
+      } catch (error) {
+        updateStatus(`Error refreshing token: ${error.message}`, 'error');
+      }
+    });
+
+    // Initialize Firebase when the page loads
+    window.onload = initializeFirebase;
+  </script>
+</body>
+</html> 

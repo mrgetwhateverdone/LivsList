@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getAppCheckToken } from '../firebase/firebase';
 
 const StoreLocator = () => {
   const [loading, setLoading] = useState(true);
@@ -12,6 +13,23 @@ const StoreLocator = () => {
   const [markers, setMarkers] = useState([]);
   const [mapError, setMapError] = useState(false);
   const [apiLoadAttempts, setApiLoadAttempts] = useState(0);
+  const [appCheckToken, setAppCheckToken] = useState(null);
+
+  // Get App Check token on component mount
+  useEffect(() => {
+    const fetchAppCheckToken = async () => {
+      try {
+        const token = await getAppCheckToken();
+        setAppCheckToken(token);
+        console.log('App Check token obtained successfully');
+      } catch (error) {
+        console.error('Error obtaining App Check token:', error);
+        setError('Failed to authenticate the application. Please try again later.');
+      }
+    };
+
+    fetchAppCheckToken();
+  }, []);
 
   // Define getUserLocation as a useCallback to avoid recreating it on every render
   const getUserLocation = useCallback(() => {
@@ -168,11 +186,9 @@ const StoreLocator = () => {
     }
   }, [map, userLocation, mapError, markers, searchRadius]); // Include all dependencies
 
-  // Load Google Maps API
+  // Load Google Maps API with App Check token
   useEffect(() => {
-    // Check if Google Maps is already loaded
-    if (window.google && window.google.maps && window.google.maps.places && window.google.maps.geometry) {
-      console.log('Google Maps API already loaded');
+    if (window.google && window.google.maps) {
       setMapLoaded(true);
       setMapError(false);
       return;
@@ -188,7 +204,7 @@ const StoreLocator = () => {
 
     const loadGoogleMapsAPI = () => {
       try {
-        console.log('Loading Google Maps API...');
+        console.log('Loading Google Maps API with App Check...');
         // Create script element
         const googleMapScript = document.createElement('script');
         
@@ -206,105 +222,91 @@ const StoreLocator = () => {
         // Log the full URL for debugging (without exposing the key in production)
         console.log(`Loading Google Maps with libraries: places,geometry`);
         
-        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMapsCallback&v=weekly`;
+        // Initialize Google Maps Settings with App Check token
+        window.initGoogleMapsCallback = () => {
+          console.log('Google Maps API loaded successfully');
+          
+          // Set up App Check token for Google Maps
+          if (window.google && window.google.maps) {
+            try {
+              const { Settings } = window.google.maps;
+              if (Settings) {
+                Settings.getInstance().fetchAppCheckToken = async () => {
+                  // Refresh token if needed
+                  try {
+                    const token = await getAppCheckToken();
+                    console.log('Successfully fetched App Check token for Google Maps');
+                    return token;
+                  } catch (error) {
+                    console.error('Error fetching App Check token for Google Maps:', error);
+                    return null;
+                  }
+                };
+                console.log('App Check token integration with Google Maps successful');
+              }
+            } catch (err) {
+              console.error('Error setting up App Check with Google Maps:', err);
+            }
+            
+            // Initialize the map
+            initializeMap();
+          }
+        };
+        
+        // Set the script source with callback
+        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMapsCallback`;
         googleMapScript.async = true;
         googleMapScript.defer = true;
         
-        // Define a global callback function that will be called when the API is loaded
-        window.initGoogleMapsCallback = () => {
-          console.log('Google Maps API loaded successfully');
-          setMapLoaded(true);
-          setMapError(false);
-        };
-        
-        // Add event listeners for success and failure
-        googleMapScript.addEventListener('load', () => {
-          console.log('Script loaded event fired');
-        });
-        
-        googleMapScript.addEventListener('error', (e) => {
-          console.error('Failed to load Google Maps API', e);
+        // Add error handling
+        googleMapScript.onerror = () => {
+          console.error('Failed to load Google Maps script');
           setMapError(true);
           setError('Failed to load Google Maps. Please check your internet connection and try again.');
           setLoading(false);
-          
-          // Try to reload the API if it fails (up to 3 attempts)
-          if (apiLoadAttempts < 2) {
-            setTimeout(() => {
-              setApiLoadAttempts(prev => prev + 1);
-              loadGoogleMapsAPI();
-            }, 2000);
-          }
-        });
+          setApiLoadAttempts(prev => prev + 1);
+        };
         
-        // Append script to body
-        document.body.appendChild(googleMapScript);
-      } catch (err) {
-        console.error('Error setting up Google Maps:', err);
+        // Append the script to the document
+        document.head.appendChild(googleMapScript);
+      } catch (error) {
+        console.error('Error in loadGoogleMapsAPI:', error);
         setMapError(true);
-        setError('Failed to set up Google Maps. Please try again later.');
+        setError(`Error loading Google Maps: ${error.message}`);
         setLoading(false);
       }
     };
-    
-    loadGoogleMapsAPI();
-    
-    // Cleanup function
-    return () => {
-      // Remove the callback function
-      if (window.initGoogleMapsCallback) {
-        delete window.initGoogleMapsCallback;
-      }
-      
-      // Remove the auth failure handler
-      if (window.gm_authFailure) {
-        delete window.gm_authFailure;
-      }
-      
-      // Remove any Google Maps scripts
-      const scripts = document.querySelectorAll('script[src*="maps.googleapis.com/maps/api/js"]');
-      scripts.forEach(script => {
-        if (script && script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      });
-    };
-  }, [apiLoadAttempts]);
 
-  // Initialize map once API is loaded
+    // Only load the API if we have an App Check token or if we've tried too many times
+    if (appCheckToken || apiLoadAttempts > 2) {
+      loadGoogleMapsAPI();
+    }
+  }, [appCheckToken, apiLoadAttempts]);
+
+  // Initialize map when API is loaded
   useEffect(() => {
-    if (mapLoaded && !mapError) {
-      console.log('Initializing map...');
+    if (mapLoaded && !map) {
       initializeMap();
     }
-  }, [mapLoaded, mapError]);
-  
-  // Get user location after map is initialized
-  useEffect(() => {
-    if (map && mapLoaded && !mapError) {
-      console.log('Getting user location...');
-      getUserLocation();
-    }
-  }, [map, mapLoaded, mapError, getUserLocation]);
+  }, [mapLoaded, map]);
 
-  // Update map when user location changes
-  useEffect(() => {
-    if (userLocation && map && !mapError) {
-      console.log('User location updated, centering map...');
-      map.setCenter(userLocation);
-      findNearbyGroceryStores();
-    }
-  }, [userLocation, map, mapError, findNearbyGroceryStores]); // Added findNearbyGroceryStores as dependency
-
+  // Initialize map
   const initializeMap = () => {
     try {
-      console.log('Setting up map...');
+      if (!window.google || !window.google.maps) {
+        console.error('Google Maps not loaded yet');
+        return;
+      }
+      
+      console.log('Initializing map...');
+      
+      // Create map instance
       const mapOptions = {
-        zoom: 12,
         center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
-        mapTypeControl: false,
-        fullscreenControl: false,
+        zoom: 12,
+        mapTypeControl: true,
         streetViewControl: false,
+        fullscreenControl: true,
         zoomControl: true,
         styles: [
           {
@@ -315,393 +317,328 @@ const StoreLocator = () => {
         ]
       };
       
-      const mapElement = document.getElementById('map');
-      if (!mapElement) {
-        console.error('Map element not found');
-        setError('Could not initialize the map. Please refresh the page.');
-        setLoading(false);
-        return;
-      }
+      const mapInstance = new window.google.maps.Map(
+        document.getElementById('map'),
+        mapOptions
+      );
       
-      const newMap = new window.google.maps.Map(mapElement, mapOptions);
-      console.log('Map created successfully');
-      setMap(newMap);
+      setMap(mapInstance);
+      
+      // Get user location after map is initialized
+      getUserLocation();
     } catch (err) {
       console.error('Error initializing map:', err);
-      setError('Failed to load the map. Please try again later.');
-      setLoading(false);
+      setMapError(true);
+      setError('Failed to initialize the map. Please refresh the page and try again.');
     }
   };
 
+  // Handle zip code search
   const handleZipCodeSearch = (e) => {
     e.preventDefault();
     
-    if (!zipCode.trim() || !/^\d{5}(-\d{4})?$/.test(zipCode)) {
-      setError('Please enter a valid 5-digit zip code.');
+    if (!zipCode.trim()) {
+      setError('Please enter a valid zip code');
       return;
     }
     
     setLoading(true);
     setError(null);
     
-    try {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: zipCode + ', USA' }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-          const location = {
-            lat: results[0].geometry.location.lat(),
-            lng: results[0].geometry.location.lng()
-          };
-          setUserLocation(location);
-        } else {
-          setError('Could not find that zip code. Please try again.');
-          setLoading(false);
+    // Use Geocoding API to convert zip code to coordinates
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: zipCode, componentRestrictions: { country: 'US' } }, (results, status) => {
+      if (status === window.google.maps.GeocoderStatus.OK && results[0]) {
+        const location = results[0].geometry.location;
+        setUserLocation({ lat: location.lat(), lng: location.lng() });
+        
+        // Center map on the new location
+        if (map) {
+          map.setCenter(location);
+          map.setZoom(12);
+          
+          // Add marker for the location
+          new window.google.maps.Marker({
+            position: location,
+            map: map,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: '#4ade80',
+              fillOpacity: 0.7,
+              strokeWeight: 2,
+              strokeColor: '#ffffff'
+            },
+            title: `Location: ${zipCode}`
+          });
         }
-      });
-    } catch (err) {
-      console.error('Error in zip code search:', err);
-      setError('An error occurred while searching for the zip code. Please try again.');
-      setLoading(false);
-    }
+        
+        findNearbyGroceryStores();
+      } else {
+        console.error('Geocoding error:', status);
+        setError('Could not find location for this zip code. Please try another one.');
+        setLoading(false);
+      }
+    });
   };
 
-  // Group stores by color based on distance
+  // Group stores by distance
   const getStoreGroups = () => {
-    if (!stores.length) return [];
+    const groups = {
+      nearby: [],
+      medium: [],
+      far: []
+    };
     
-    // Group stores by color
-    const groups = [];
-    
-    // Less than 1 mile
-    const lessThan1 = stores.filter(store => parseFloat(store.distance) <= 1);
-    if (lessThan1.length > 0) {
-      groups.push({ color: 'green', stores: lessThan1 });
-    }
-    
-    // 1-3 miles
-    const oneToThree = stores.filter(store => 
-      parseFloat(store.distance) > 1 && parseFloat(store.distance) <= 3
-    );
-    if (oneToThree.length > 0) {
-      groups.push({ color: 'blue', stores: oneToThree });
-    }
-    
-    // 3-5 miles
-    const threeToFive = stores.filter(store => 
-      parseFloat(store.distance) > 3 && parseFloat(store.distance) <= 5
-    );
-    if (threeToFive.length > 0) {
-      groups.push({ color: 'purple', stores: threeToFive });
-    }
-    
-    // 5-10 miles
-    const fiveToTen = stores.filter(store => 
-      parseFloat(store.distance) > 5 && parseFloat(store.distance) <= 10
-    );
-    if (fiveToTen.length > 0) {
-      groups.push({ color: 'orange', stores: fiveToTen });
-    }
-    
-    // More than 10 miles
-    const moreThanTen = stores.filter(store => parseFloat(store.distance) > 10);
-    if (moreThanTen.length > 0) {
-      groups.push({ color: 'red', stores: moreThanTen });
-    }
+    stores.forEach(store => {
+      const distance = parseFloat(store.distance);
+      if (distance <= 2) {
+        groups.nearby.push(store);
+      } else if (distance <= 5) {
+        groups.medium.push(store);
+      } else {
+        groups.far.push(store);
+      }
+    });
     
     return groups;
   };
 
+  // Get color class based on distance
   const getColorClass = (color) => {
     switch (color) {
-      case 'green': return 'bg-green-100 border-green-500 text-green-800';
-      case 'blue': return 'bg-blue-100 border-blue-500 text-blue-800';
-      case 'purple': return 'bg-purple-100 border-purple-500 text-purple-800';
-      case 'orange': return 'bg-orange-100 border-orange-500 text-orange-800';
-      case 'red': return 'bg-red-100 border-red-500 text-red-800';
+      case 'nearby': return 'bg-green-100 border-green-500 text-green-800';
+      case 'medium': return 'bg-yellow-100 border-yellow-500 text-yellow-800';
+      case 'far': return 'bg-red-100 border-red-500 text-red-800';
       default: return 'bg-gray-100 border-gray-500 text-gray-800';
     }
   };
 
+  // Get color label based on distance
   const getColorLabel = (color) => {
     switch (color) {
-      case 'green': return 'Less than 1 mile';
-      case 'blue': return '1-3 miles';
-      case 'purple': return '3-5 miles';
-      case 'orange': return '5-10 miles';
-      case 'red': return 'More than 10 miles';
+      case 'nearby': return 'Nearby (< 2 miles)';
+      case 'medium': return 'Medium Distance (2-5 miles)';
+      case 'far': return 'Far (> 5 miles)';
       default: return '';
     }
   };
 
-  if (mapError) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg text-center">
-          <h2 className="text-xl font-bold mb-2">Google Maps Error</h2>
-          <p className="mb-4">We couldn't load the Google Maps service properly. This might be due to:</p>
-          <ul className="list-disc text-left inline-block mb-4">
-            <li>An issue with the API key (it may be invalid or restricted)</li>
-            <li>Network connectivity problems</li>
-            <li>Missing API activation in Google Cloud Console</li>
-            <li>Billing not enabled for the Google Maps Platform</li>
-          </ul>
-          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-md text-sm text-yellow-800 mb-4">
-            <p className="font-semibold">For developers:</p>
-            <p>1. Ensure the Google Maps JavaScript API is enabled in the Google Cloud Console</p>
-            <p>2. Verify that billing is set up for the Google Maps Platform</p>
-            <p>3. Check that the API key has the proper permissions and no restrictive referrer settings</p>
-            <p>4. Required APIs: Maps JavaScript API, Places API, and Geocoding API</p>
-          </div>
-          <p>Please check the browser console for specific error messages.</p>
-          <div className="mt-4 flex justify-center space-x-4">
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              Reload Page
-            </button>
-            <a 
-              href="https://console.cloud.google.com/google/maps-apis/overview" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Go to Google Cloud Console
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Render the component
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2 flex items-center">
-          <svg className="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Grocery Store Locator
-        </h1>
-        <p className="text-gray-600">Find grocery stores near you within a 10-mile radius</p>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Find Grocery Stores Near You</h1>
       
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-full md:w-1/3">
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6 transition-all duration-300 hover:shadow-lg">
-            <form onSubmit={handleZipCodeSearch} className="mb-4">
-              <div className="mb-4">
-                <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-                  Search by Zip Code
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    id="zipCode"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    placeholder="Enter a zip code"
-                    pattern="^\d{5}(-\d{4})?$"
-                    maxLength="10"
-                    className="flex-grow px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 transform hover:translate-x-0.5"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Searching...
-                      </span>
-                    ) : (
-                      'Search'
-                    )}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Example: 94103</p>
-              </div>
-              
-              <div className="mb-4">
-                <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                  <span>Search Radius</span>
-                  <span className="text-green-600 font-semibold">{searchRadius} miles</span>
-                </label>
-                <input
-                  type="range"
-                  id="radius"
-                  min="1"
-                  max="10"
-                  value={searchRadius}
-                  onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-500"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>1 mile</span>
-                  <span>10 miles</span>
-                </div>
-              </div>
-              
-              <button
-                type="button"
-                onClick={getUserLocation}
-                className="w-full px-4 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.01] hover:shadow-sm"
-                disabled={loading}
-              >
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Use My Current Location
-              </button>
-            </form>
-            
-            {error && (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-4 animate-fadeIn">
-                <div className="flex">
-                  <svg className="h-5 w-5 text-red-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <span>{error}</span>
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+      
+      {/* Map and search controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Map container */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-md overflow-hidden">
+          <div id="map" className="w-full h-[400px] lg:h-[600px] relative">
+            {/* Loading overlay */}
+            {(loading || !mapLoaded) && (
+              <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
+                  <p className="text-gray-700">Loading map...</p>
                 </div>
               </div>
             )}
             
-            <div className="mb-4">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                <svg className="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Distance Legend
-              </h3>
-              <div className="space-y-2 bg-gray-50 p-3 rounded-lg">
-                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
-                  <div className="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
-                  <span className="text-sm">Less than 1 mile</span>
+            {/* Map error overlay */}
+            {mapError && (
+              <div className="absolute inset-0 bg-red-100 bg-opacity-75 flex items-center justify-center p-6">
+                <div className="text-center max-w-md">
+                  <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Map Loading Error</h3>
+                  <p className="text-red-700 mb-4">{error || 'There was a problem loading the map. Please refresh the page and try again.'}</p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Refresh Page
+                  </button>
                 </div>
-                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
-                  <div className="w-4 h-4 rounded-full bg-blue-500 mr-2"></div>
-                  <span className="text-sm">1-3 miles</span>
-                </div>
-                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
-                  <div className="w-4 h-4 rounded-full bg-purple-500 mr-2"></div>
-                  <span className="text-sm">3-5 miles</span>
-                </div>
-                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
-                  <div className="w-4 h-4 rounded-full bg-orange-500 mr-2"></div>
-                  <span className="text-sm">5-10 miles</span>
-                </div>
-                <div className="flex items-center transition-transform duration-200 hover:translate-x-1">
-                  <div className="w-4 h-4 rounded-full bg-red-500 mr-2"></div>
-                  <span className="text-sm">More than 10 miles</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="font-semibold text-lg flex items-center">
-                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                Nearby Grocery Stores
-              </h2>
-              {stores.length > 0 && (
-                <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  {stores.length} found
-                </span>
-              )}
-            </div>
-            
-            {loading ? (
-              <div className="p-6 flex justify-center">
-                <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-                  <p className="mt-3 text-gray-500">Searching for stores...</p>
-                </div>
-              </div>
-            ) : stores.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                {error ? error : 'No grocery stores found nearby. Try increasing the search radius or searching a different location.'}
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
-                {getStoreGroups().map((group, groupIndex) => (
-                  <div key={groupIndex} className={`border-l-4 ${getColorClass(group.color)}`}>
-                    <div className={`px-4 py-2 font-medium ${getColorClass(group.color)} flex items-center`}>
-                      <div className={`w-3 h-3 rounded-full bg-${group.color}-500 mr-2`}></div>
-                      {getColorLabel(group.color)}
-                    </div>
-                    {group.stores.map(store => (
-                      <div 
-                        key={store.id} 
-                        className="p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-sm group"
-                        onClick={() => {
-                          if (map && store.location) {
-                            map.setCenter(store.location);
-                            map.setZoom(15);
-                            if (store.marker) {
-                              window.google.maps.event.trigger(store.marker, 'click');
-                            }
-                          }
-                        }}
-                      >
-                        <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">{store.name}</h3>
-                        <p className="text-sm text-gray-600 mt-1 flex items-center">
-                          <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {store.address}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm font-medium text-green-600 flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {store.distance} miles
-                          </span>
-                          {store.rating && (
-                            <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
-                              <svg className="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                              <span className="text-sm text-gray-600">{store.rating}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-blue-600">
-                          Click to view on map →
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
               </div>
             )}
           </div>
         </div>
         
-        <div className="w-full md:w-2/3">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden h-[700px] transition-all duration-300 hover:shadow-lg">
-            {!mapLoaded ? (
-              <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading map...</p>
+        {/* Search controls and results */}
+        <div className="lg:col-span-1">
+          {/* Search form */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Search Options</h2>
+            
+            <form onSubmit={handleZipCodeSearch} className="mb-6">
+              <div className="mb-4">
+                <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Zip Code
+                </label>
+                <div className="flex">
+                  <input
+                    type="text"
+                    id="zipCode"
+                    pattern="[0-9]{5}"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    placeholder="Enter zip code"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-green-500 text-white px-4 py-2 rounded-r-lg hover:bg-green-600 transition-colors"
+                    disabled={loading || !mapLoaded}
+                  >
+                    Search
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Enter a 5-digit US zip code</p>
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="searchRadius" className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Radius: {searchRadius} miles
+                </label>
+                <input
+                  type="range"
+                  id="searchRadius"
+                  min="1"
+                  max="30"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>1 mile</span>
+                  <span>15 miles</span>
+                  <span>30 miles</span>
                 </div>
               </div>
+              
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={getUserLocation}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  disabled={loading || !mapLoaded}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Use My Location
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Results list */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              {loading ? 'Searching for stores...' : `Found ${stores.length} Stores`}
+            </h2>
+            
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            ) : stores.length > 0 ? (
+              <div className="max-h-[600px] overflow-y-auto pr-2">
+                {Object.entries(getStoreGroups()).map(([color, groupStores]) => (
+                  groupStores.length > 0 && (
+                    <div key={color} className="mb-6">
+                      <h3 className={`text-sm font-medium px-3 py-1 rounded-full inline-block mb-3 ${getColorClass(color)}`}>
+                        {getColorLabel(color)}
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        {groupStores.map(store => (
+                          <div 
+                            key={store.id}
+                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group cursor-pointer"
+                            onClick={() => {
+                              map.setCenter(store.location);
+                              map.setZoom(16);
+                              
+                              // Open the info window for this store
+                              const infoWindow = new window.google.maps.InfoWindow({
+                                content: `
+                                  <div class="p-2">
+                                    <h3 class="font-bold">${store.name}</h3>
+                                    <p>${store.address}</p>
+                                    <p>${store.distance} miles away</p>
+                                    <p>Rating: ${store.rating ? store.rating + '/5' : 'N/A'}</p>
+                                  </div>
+                                `
+                              });
+                              
+                              infoWindow.open(map, store.marker);
+                            }}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium text-gray-800 group-hover:text-green-600 transition-colors">
+                                  {store.name}
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-1">{store.address}</p>
+                                <div className="flex items-center mt-2">
+                                  <span className="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                                    {store.distance} miles
+                                  </span>
+                                  {store.rating && (
+                                    <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full ml-2">
+                                      ★ {store.rating}
+                                    </span>
+                                  )}
+                                  {store.open !== undefined && (
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ml-2 ${
+                                      store.open 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {store.open ? 'Open' : 'Closed'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button 
+                                className="text-gray-400 hover:text-green-500 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Open in Google Maps
+                                  window.open(
+                                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                      store.name + ' ' + store.address
+                                    )}&query_place_id=${store.id}`,
+                                    '_blank'
+                                  );
+                                }}
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
             ) : (
-              <div id="map" className="w-full h-full"></div>
+              <div className="text-center py-8 text-gray-500">
+                No stores found. Try adjusting your search radius or location.
+              </div>
             )}
           </div>
         </div>
