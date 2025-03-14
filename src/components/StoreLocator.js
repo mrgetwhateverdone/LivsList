@@ -11,6 +11,7 @@ const StoreLocator = () => {
   const [map, setMap] = useState(null);
   const [markers, setMarkers] = useState([]);
   const [mapError, setMapError] = useState(false);
+  const [apiLoadAttempts, setApiLoadAttempts] = useState(0);
 
   // Define getUserLocation as a useCallback to avoid recreating it on every render
   const getUserLocation = useCallback(() => {
@@ -26,27 +27,33 @@ const StoreLocator = () => {
           setUserLocation(location);
           
           // Add marker for user location
-          if (map) {
-            new window.google.maps.Marker({
-              position: location,
-              map: map,
-              icon: {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 10,
-                fillColor: '#4ade80',
-                fillOpacity: 0.7,
-                strokeWeight: 2,
-                strokeColor: '#ffffff'
-              },
-              title: 'Your Location'
-            });
+          if (map && window.google && window.google.maps) {
+            try {
+              new window.google.maps.Marker({
+                position: location,
+                map: map,
+                icon: {
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: '#4ade80',
+                  fillOpacity: 0.7,
+                  strokeWeight: 2,
+                  strokeColor: '#ffffff'
+                },
+                title: 'Your Location'
+              });
+            } catch (err) {
+              console.error('Error adding user location marker:', err);
+            }
           }
+          findNearbyGroceryStores();
         },
         (err) => {
           console.error('Error getting user location:', err);
           setError('Unable to get your location. Please enter a zip code manually.');
           setLoading(false);
-        }
+        },
+        { timeout: 10000, enableHighAccuracy: true }
       );
     } else {
       setError('Geolocation is not supported by your browser. Please enter a zip code manually.');
@@ -56,7 +63,16 @@ const StoreLocator = () => {
 
   // Define findNearbyGroceryStores as a useCallback
   const findNearbyGroceryStores = useCallback(() => {
-    if (!map || !userLocation || mapError) return;
+    if (!map || !userLocation || mapError || !window.google || !window.google.maps || !window.google.maps.places) {
+      console.log('Cannot find grocery stores: Missing required objects', {
+        map: !!map,
+        userLocation: !!userLocation,
+        mapError,
+        googleMaps: !!(window.google && window.google.maps),
+        places: !!(window.google && window.google.maps && window.google.maps.places)
+      });
+      return;
+    }
     
     setLoading(true);
     setStores([]);
@@ -155,34 +171,59 @@ const StoreLocator = () => {
   // Load Google Maps API
   useEffect(() => {
     // Check if Google Maps is already loaded
-    if (window.google && window.google.maps) {
+    if (window.google && window.google.maps && window.google.maps.places && window.google.maps.geometry) {
+      console.log('Google Maps API already loaded');
       setMapLoaded(true);
+      setMapError(false);
       return;
     }
 
+    // Remove any existing Google Maps scripts to avoid conflicts
+    const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com/maps/api/js"]');
+    existingScripts.forEach(script => {
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    });
+
     const loadGoogleMapsAPI = () => {
       try {
+        console.log('Loading Google Maps API...');
         // Create script element
         const googleMapScript = document.createElement('script');
         
-        // Use environment variable or fallback to a placeholder
-        const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I';
+        // Use the actual API key, not a placeholder
+        const apiKey = 'AIzaSyDT8UDmVh5ra1cRv07sfAWlTkfUnPD_w3I';
         
-        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
+        googleMapScript.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMapsCallback`;
         googleMapScript.async = true;
         googleMapScript.defer = true;
         
-        // Add event listeners for success and failure
-        googleMapScript.addEventListener('load', () => {
+        // Define a global callback function that will be called when the API is loaded
+        window.initGoogleMapsCallback = () => {
+          console.log('Google Maps API loaded successfully');
           setMapLoaded(true);
           setMapError(false);
+        };
+        
+        // Add event listeners for success and failure
+        googleMapScript.addEventListener('load', () => {
+          console.log('Script loaded event fired');
         });
         
-        googleMapScript.addEventListener('error', () => {
-          console.error('Failed to load Google Maps API');
+        googleMapScript.addEventListener('error', (e) => {
+          console.error('Failed to load Google Maps API', e);
           setMapError(true);
           setError('Failed to load Google Maps. Please check your internet connection and try again.');
           setLoading(false);
+          
+          // Try to reload the API if it fails (up to 3 attempts)
+          if (apiLoadAttempts < 2) {
+            setTimeout(() => {
+              setApiLoadAttempts(prev => prev + 1);
+              loadGoogleMapsAPI();
+            }, 2000);
+          }
         });
         
         // Append script to body
@@ -199,6 +240,12 @@ const StoreLocator = () => {
     
     // Cleanup function
     return () => {
+      // Remove the callback function
+      if (window.initGoogleMapsCallback) {
+        delete window.initGoogleMapsCallback;
+      }
+      
+      // Remove any Google Maps scripts
       const scripts = document.querySelectorAll('script[src*="maps.googleapis.com/maps/api/js"]');
       scripts.forEach(script => {
         if (script && script.parentNode) {
@@ -206,19 +253,28 @@ const StoreLocator = () => {
         }
       });
     };
-  }, []);
+  }, [apiLoadAttempts]);
 
   // Initialize map once API is loaded
   useEffect(() => {
     if (mapLoaded && !mapError) {
+      console.log('Initializing map...');
       initializeMap();
+    }
+  }, [mapLoaded, mapError]);
+  
+  // Get user location after map is initialized
+  useEffect(() => {
+    if (map && mapLoaded && !mapError) {
+      console.log('Getting user location...');
       getUserLocation();
     }
-  }, [mapLoaded, mapError, getUserLocation]); // Added getUserLocation as dependency
+  }, [map, mapLoaded, mapError, getUserLocation]);
 
   // Update map when user location changes
   useEffect(() => {
     if (userLocation && map && !mapError) {
+      console.log('User location updated, centering map...');
       map.setCenter(userLocation);
       findNearbyGroceryStores();
     }
@@ -226,6 +282,7 @@ const StoreLocator = () => {
 
   const initializeMap = () => {
     try {
+      console.log('Setting up map...');
       const mapOptions = {
         zoom: 12,
         center: { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
@@ -251,6 +308,7 @@ const StoreLocator = () => {
       }
       
       const newMap = new window.google.maps.Map(mapElement, mapOptions);
+      console.log('Map created successfully');
       setMap(newMap);
     } catch (err) {
       console.error('Error initializing map:', err);
@@ -371,6 +429,12 @@ const StoreLocator = () => {
             <li>Temporary service disruption</li>
           </ul>
           <p>Please try again later or contact support if the problem persists.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            Reload Page
+          </button>
         </div>
       </div>
     );
@@ -500,9 +564,13 @@ const StoreLocator = () => {
                         key={store.id} 
                         className="p-4 hover:bg-gray-50 cursor-pointer"
                         onClick={() => {
-                          map.setCenter(store.location);
-                          map.setZoom(15);
-                          window.google.maps.event.trigger(store.marker, 'click');
+                          if (map && store.location) {
+                            map.setCenter(store.location);
+                            map.setZoom(15);
+                            if (store.marker) {
+                              window.google.maps.event.trigger(store.marker, 'click');
+                            }
+                          }
                         }}
                       >
                         <h3 className="font-semibold text-gray-800">{store.name}</h3>
