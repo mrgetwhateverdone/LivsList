@@ -8,11 +8,19 @@ import StoreLocator from './components/StoreLocator';
 import MyLists from './components/MyLists';
 import Footer from './components/Footer';
 import { searchIngredients, getApiPointsUsed } from './services/api';
-import { getGroceryList, addItemToList, removeItemFromList } from './utils/localStorage';
+import { 
+  getGroceryList, 
+  addItemToList, 
+  removeItemFromList, 
+  getAllLists,
+  createList,
+  deleteList
+} from './utils/localStorage';
 
 function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [groceryList, setGroceryList] = useState([]);
+  const [allLists, setAllLists] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [apiPointsUsed, setApiPointsUsed] = useState(0);
@@ -21,6 +29,7 @@ function App() {
   // Load grocery list from localStorage on initial render
   useEffect(() => {
     setGroceryList(getGroceryList());
+    setAllLists(getAllLists());
     setApiPointsUsed(getApiPointsUsed());
   }, []);
 
@@ -41,14 +50,26 @@ function App() {
     }
   };
 
-  const handleAddToList = (item) => {
-    const updatedList = addItemToList(item);
+  const handleAddToList = (item, listId = 'default') => {
+    const updatedList = addItemToList(item, listId);
     setGroceryList(updatedList);
+    setAllLists(getAllLists()); // Refresh all lists
   };
 
-  const handleRemoveItem = (itemId) => {
-    const updatedList = removeItemFromList(itemId);
+  const handleRemoveItem = (itemId, listId = 'default') => {
+    const updatedList = removeItemFromList(itemId, listId);
     setGroceryList(updatedList);
+    setAllLists(getAllLists()); // Refresh all lists
+  };
+
+  const handleCreateList = (name) => {
+    const updatedLists = createList(name);
+    setAllLists(updatedLists);
+  };
+
+  const handleDeleteList = (listId) => {
+    const updatedLists = deleteList(listId);
+    setAllLists(updatedLists);
   };
 
   const handleNavigate = (page) => {
@@ -63,8 +84,10 @@ function App() {
       case 'lists':
         return (
           <MyLists 
-            items={groceryList} 
-            onRemoveItem={handleRemoveItem} 
+            lists={allLists}
+            onRemoveItem={handleRemoveItem}
+            onCreateList={handleCreateList}
+            onDeleteList={handleDeleteList}
           />
         );
       case 'home':
@@ -93,7 +116,8 @@ function App() {
               <SearchResults 
                 results={searchResults} 
                 onAddToList={handleAddToList} 
-                isLoading={isLoading} 
+                isLoading={isLoading}
+                lists={allLists}
               />
             </div>
             
