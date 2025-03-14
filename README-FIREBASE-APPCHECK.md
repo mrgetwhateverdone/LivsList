@@ -30,58 +30,40 @@ Firebase is initialized in the `src/index.js` file, which calls the initializati
 - **Firebase App Check**: For securing API keys and resources
 - **Firebase Analytics**: For tracking user interactions and app usage
 
-## Setup Instructions
+## Setup Instructions (Completed)
 
-### 1. Firebase Project (Already Completed)
+### 1. Firebase Project (Completed)
 
 The Firebase project has been created with the project ID: `livslist-fdf38`
 
-### 2. App Registration (Already Completed)
+### 2. App Registration (Completed)
 
 The web app has been registered with Firebase.
 
-### 3. Enable App Check
+### 3. Enable App Check (Completed)
 
-1. In the Firebase Console, navigate to "App Check" in the left sidebar
-2. Click "Get started"
-3. Under "Web apps", select your registered app
-4. Choose "reCAPTCHA v3" as the provider
-5. Click "Create new site key"
-6. Enter your domain (e.g., "livslist.com") and click "Create"
-7. Copy the reCAPTCHA site key - you'll need this later
-8. Click "Save"
+App Check has been enabled with reCAPTCHA v3 as the provider.
 
-### 4. Update Your Firebase Configuration (Partially Completed)
+### 4. Update Firebase Configuration (Completed)
 
-1. The Firebase configuration has been updated in `src/firebase/firebase.js` with your actual Firebase details
-2. You still need to replace the placeholder reCAPTCHA site key with your actual key:
+The Firebase configuration has been updated in `src/firebase/firebase.js` with your actual Firebase details and reCAPTCHA site key.
 
-```javascript
-appCheck = initAppCheck(app, {
-  provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
-  isTokenAutoRefreshEnabled: true
-});
-```
+### 5. Set Up Google Maps API with App Check (Completed)
 
-### 5. Set Up Google Maps API with App Check
+The Google Maps API key has been configured with the following settings:
+- Application restrictions: HTTP referrers (websites)
+- Allowed domains: Added your domains including localhost for development
+- API restrictions: Restricted to specific Google Maps APIs (Maps JavaScript API, Places API, Geocoding API)
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Navigate to your project that contains the Google Maps API key
-3. Go to "APIs & Services" > "Credentials"
-4. Find your Google Maps API key and click "Edit"
-5. Under "Application restrictions", select "HTTP referrers (websites)"
-6. Add your domain(s) to the list of allowed referrers
-7. Under "API restrictions", select "Restrict key"
-8. Select the Google Maps APIs you're using (e.g., Maps JavaScript API, Places API)
-9. Click "Save"
+### 6. Enable Billing for Google Maps API (Completed)
 
-### 6. Test Your Implementation
+Billing has been enabled for the Google Cloud project, which activates the Google Maps API key.
 
-1. Open the `public/app-check-test.html` file in your browser
-2. Check that Firebase initializes successfully
-3. Verify that App Check obtains a token
-4. Confirm that Google Maps loads correctly
-5. Use the "Refresh App Check Token" button to test token renewal
+### 7. Test Your Implementation (Completed)
+
+The App Check integration has been tested with:
+- The test HTML file (`public/app-check-test.html`)
+- The full application running on the development server
 
 ## Debugging
 
