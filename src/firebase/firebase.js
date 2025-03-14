@@ -1,21 +1,22 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck as initAppCheck, ReCaptchaV3Provider, getToken } from 'firebase/app-check';
+import { getAnalytics } from 'firebase/analytics';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  // TODO: Replace with your actual Firebase configuration
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  projectId: "YOUR_FIREBASE_PROJECT_ID",
-  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID",
-  measurementId: "YOUR_FIREBASE_MEASUREMENT_ID"
+  apiKey: "AIzaSyDjHP_7bpE68_fzhoVuL0JDVZTW_-VKZ7o",
+  authDomain: "livslist-fdf38.firebaseapp.com",
+  projectId: "livslist-fdf38",
+  storageBucket: "livslist-fdf38.firebasestorage.app",
+  messagingSenderId: "623729668062",
+  appId: "1:623729668062:web:6649e91a81d02b0e65f74f",
+  measurementId: "G-D65PMLFSPD"
 };
 
 let app;
 let appCheck;
+let analytics;
 
 /**
  * Initialize Firebase
@@ -24,6 +25,7 @@ export const initializeFirebase = () => {
   if (!app) {
     try {
       app = initializeApp(firebaseConfig);
+      analytics = getAnalytics(app);
       console.log('Firebase initialized successfully');
       return app;
     } catch (error) {
@@ -85,4 +87,4 @@ export const getAppCheckToken = async () => {
   }
 };
 
-export { app, appCheck }; 
+export { app, appCheck, analytics }; 

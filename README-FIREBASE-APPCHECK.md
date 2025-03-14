@@ -8,21 +8,37 @@ Firebase App Check helps protect your backend resources from abuse, such as bill
 
 In this implementation, we're using App Check to secure the Google Maps API key, ensuring that only your legitimate app can use the API key, even if it's somehow extracted from your code.
 
+## Firebase Configuration
+
+The Firebase configuration has been set up with the following details:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSyDjHP_7bpE68_fzhoVuL0JDVZTW_-VKZ7o",
+  authDomain: "livslist-fdf38.firebaseapp.com",
+  projectId: "livslist-fdf38",
+  storageBucket: "livslist-fdf38.firebasestorage.app",
+  messagingSenderId: "623729668062",
+  appId: "1:623729668062:web:6649e91a81d02b0e65f74f",
+  measurementId: "G-D65PMLFSPD"
+};
+```
+
+Firebase is initialized in the `src/index.js` file, which calls the initialization functions from `src/firebase/firebase.js`. The following Firebase services are currently set up:
+
+- **Firebase Core**: Basic Firebase functionality
+- **Firebase App Check**: For securing API keys and resources
+- **Firebase Analytics**: For tracking user interactions and app usage
+
 ## Setup Instructions
 
-### 1. Create a Firebase Project
+### 1. Firebase Project (Already Completed)
 
-1. Go to the [Firebase Console](https://console.firebase.google.com/)
-2. Click "Add project" and follow the steps to create a new project
-3. Once your project is created, click "Continue"
+The Firebase project has been created with the project ID: `livslist-fdf38`
 
-### 2. Register Your Web App
+### 2. App Registration (Already Completed)
 
-1. In the Firebase Console, click the web icon (</>) to add a web app
-2. Enter a nickname for your app (e.g., "Liv's List Web")
-3. Check the "Also set up Firebase Hosting" option if you plan to use Firebase Hosting
-4. Click "Register app"
-5. Copy the Firebase configuration object - you'll need this later
+The web app has been registered with Firebase.
 
 ### 3. Enable App Check
 
@@ -35,23 +51,10 @@ In this implementation, we're using App Check to secure the Google Maps API key,
 7. Copy the reCAPTCHA site key - you'll need this later
 8. Click "Save"
 
-### 4. Update Your Firebase Configuration
+### 4. Update Your Firebase Configuration (Partially Completed)
 
-1. Open the `src/firebase/firebase.js` file in your project
-2. Replace the placeholder values in the `firebaseConfig` object with your actual Firebase configuration:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  projectId: "YOUR_FIREBASE_PROJECT_ID",
-  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
-};
-```
-
-3. Replace the placeholder reCAPTCHA site key with your actual key:
+1. The Firebase configuration has been updated in `src/firebase/firebase.js` with your actual Firebase details
+2. You still need to replace the placeholder reCAPTCHA site key with your actual key:
 
 ```javascript
 appCheck = initAppCheck(app, {
