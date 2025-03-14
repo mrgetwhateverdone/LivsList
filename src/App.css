@@ -59,6 +59,29 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Color shifting animation for Add to List button */
+@keyframes shiftGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.color-shift-bg {
+  background-size: 200% 200%;
+  animation: shiftGradient 3s ease infinite;
+}
+
+.add-to-list-btn:hover .color-shift-bg {
+  animation: shiftGradient 2s ease infinite;
+  background-image: linear-gradient(45deg, #4ade80, #22c55e, #10b981, #22c55e, #4ade80);
+}
+
 /* Animation classes */
 .animate-fadeIn {
   animation: fadeIn 0.5s ease forwards;
