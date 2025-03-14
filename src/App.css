@@ -1,38 +1,368 @@
-.App {
-  text-align: center;
+/* Custom styles for Liv's List */
+/* Most styling is handled by Tailwind CSS */
+/* Add any custom styles here if needed */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #333;
+  background-color: #fff;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Header and Logo Styling */
+header h1 {
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: -0.5px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+header {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Smooth scrolling for the category tabs */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 2px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 2px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Card hover effects */
+.hover\:shadow-lg {
+  transition: all 0.3s ease;
+}
+
+/* Button hover animation */
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Green accent color matching the design */
+.text-green-500 {
+  color: #4ade80;
+}
+
+.bg-green-500 {
+  background-color: #4ade80;
+}
+
+.hover\:bg-green-600:hover {
+  background-color: #22c55e;
+}
+
+.border-green-500 {
+  border-color: #4ade80;
+}
+
+/* Logo styling */
+.bg-gradient-to-r {
+  background-size: 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  -webkit-text-fill-color: transparent; 
+  -moz-text-fill-color: transparent;
+}
+
+/* Logo hover effect */
+header .group:hover h1 {
+  background-image: linear-gradient(to right, #22c55e, #4ade80);
+}
+
+/* Logo animation */
+header .group {
+  transition: transform 0.3s ease;
+}
+
+header .group:active {
+  transform: scale(0.97);
+}
+
+/* Subtle animation for the logo icon */
+header .group:hover svg {
+  transform: translateY(-1px);
+}
+
+header svg {
+  transition: transform 0.2s ease;
+}
+
+/* Store Locator Styles */
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Map error state */
+.bg-red-100.border-red-400 {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Map loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Zip code input styling */
+input[pattern] {
+  font-family: 'SF Mono', 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+input[pattern]:focus {
+  font-family: 'SF Mono', 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+input[pattern]:invalid {
+  border-color: #f87171;
+}
+
+input[pattern]:valid {
+  border-color: #4ade80;
+}
+
+/* Custom range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4ade80;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #22c55e;
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4ade80;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #22c55e;
+  transform: scale(1.1);
+}
+
+/* Custom scrollbar for store list */
+.max-h-\[600px\] {
+  scrollbar-width: thin;
+  scrollbar-color: #4ade80 #f3f4f6;
+}
+
+.max-h-\[600px\]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.max-h-\[600px\]::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.max-h-\[600px\]::-webkit-scrollbar-thumb {
+  background-color: #4ade80;
+  border-radius: 3px;
+}
+
+/* Store marker animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.gm-style-iw {
+  border-radius: 8px !important;
+  padding: 12px !important;
+}
+
+/* My Lists Page Styles */
+.form-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #d1d5db;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.form-checkbox:checked {
+  background-color: #4ade80;
+  border-color: #4ade80;
+}
+
+.form-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 0.25rem;
+  height: 0.5rem;
+  border-bottom: 2px solid white;
+  border-right: 2px solid white;
+}
+
+.form-checkbox:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.3);
+}
+
+/* Animations for list items */
+li {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+li:hover {
+  transform: translateX(2px);
+}
+
+/* Strikethrough animation */
+.line-through {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+/* Sort dropdown styling */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.25rem;
+  padding-right: 2rem;
+}
+
+/* Empty state styling */
+.text-center.py-8 {
+  min-height: 200px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 20H70C75.5 20 80 24.5 80 30V70C80 75.5 75.5 80 70 80H30C24.5 80 20 75.5 20 70V30C20 24.5 24.5 20 30 20Z' stroke='%23e5e7eb' stroke-width='2'/%3E%3Cpath d='M35 40H65' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M35 50H65' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M35 60H55' stroke='%23e5e7eb' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center 30px;
+  background-size: 60px;
+  padding-top: 100px;
 }
 
-.App-link {
-  color: #61dafb;
+/* Multiple Lists Styles */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 2px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 2px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* List tab animations */
+button.rounded-full {
+  transition: all 0.2s ease;
+}
+
+button.rounded-full:hover {
+  transform: translateY(-1px);
+}
+
+button.rounded-full:active {
+  transform: translateY(0);
+}
+
+/* Modal animation */
+.fixed.inset-0 {
+  animation: fadeIn 0.2s ease;
+}
+
+.fixed.inset-0 > div {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
   }
-  to {
-    transform: rotate(360deg);
+  to { 
+    opacity: 1;
+    transform: translateY(0);
   }
+}
+
+/* Delete button animation */
+.ml-2.text-white {
+  transition: all 0.2s ease;
+}
+
+.ml-2.text-white:hover {
+  transform: scale(1.2);
 }
